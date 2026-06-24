@@ -3,35 +3,41 @@ import pandas as pd
 import plotly.express as px
 import os
 
+# Configurazione della pagina ad impatto Enterprise
 st.set_page_config(page_title="Retail Pipeline Master Platform 2026", layout="wide", page_icon="🏢")
 
+# Palette Colori Istituzionale Nexi per i Grafici
+NEXI_COLORS = ['#E30613', '#1D1D1B', '#555555', '#8A8A8A', '#CCCCCC']
+
 # -----------------------------------------------------------------------------
-# INTESTAZIONE CON LOGO NEXI VETTORIALE (SVG INCORPORATO) E SCRITTA RETAIL & LUXURY
+# LOGO UFFICIALE NEXI HD (VETTORIALE PRECISO) + TITOLO RETAIL & LUXURY
 # -----------------------------------------------------------------------------
 logo_col, title_col = st.columns([1, 4])
 
 with logo_col:
-    nexi_svg = """
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80" width="160" height="53">
-        <rect width="240" height="80" fill="transparent"/>
-        <path d="M25 25h16.5l22 30V25h14v30h-16l-22.5-30.5V55H25V25z" fill="#E30613"/>
-        <path d="M88 25h32v9H99v4h19v8H99v4h22v9H88V25z" fill="#1D1D1B"/>
-        <path d="M126 25h15l10.5 14.5L162 25h15l-17.5 23.5L178 55h-15.5l-11-15.5L140.5 55H126l17.5-23.5L126 25z" fill="#1D1D1B"/>
-        <path d="M184 25h14v30h-14V25z" fill="#1D1D1B"/>
+    nexi_svg_hd = """
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 75" width="180" height="54">
+        <g transform="translate(10,10)">
+            <path d="M 0 0 L 45 0 L 45 45 L 0 45 Z" fill="#E30613"/>
+            <path d="M 9 36 L 9 9 L 18 9 L 27 24 L 27 9 L 36 9 L 36 36 L 27 36 L 18 21 L 18 36 Z" fill="#FFFFFF"/>
+            <path d="M 58 9 L 82 9 L 82 15 L 66 15 L 66 21 L 80 21 L 80 27 L 66 27 L 66 33 L 83 33 L 83 39 L 58 39 Z" fill="#1D1D1B"/>
+            <path d="M 91 9 L 102 9 L 111 22 L 120 9 L 131 9 L 118 24 L 132 39 L 121 39 L 111 26 L 101 39 L 90 39 L 104 24 Z" fill="#1D1D1B"/>
+            <path d="M 140 9 L 149 9 L 149 39 L 140 39 Z" fill="#1D1D1B"/>
+        </g>
     </svg>
     """
-    st.markdown(nexi_svg, unsafe_allow_html=True)
+    st.markdown(nexi_svg_hd, unsafe_allow_html=True)
 
 with title_col:
     st.markdown(
         """
-        <div style="padding-top: 5px;">
-            <span style="font-size: 32px; font-weight: bold; color: #1e1e1e; font-family: sans-serif;">
+        <div style="padding-top: 2px;">
+            <span style="font-size: 34px; font-weight: bold; color: #1e1e1e; font-family: 'Helvetica Neue', sans-serif;">
                 Retail & Luxury
             </span>
             <br>
-            <span style="font-size: 15px; color: #666666; font-family: sans-serif;">
-                Retail Pipeline Master Platform 2026 | Piattaforma Strategica di Monitoraggio Acquiring & E-commerce
+            <span style="font-size: 14px; color: #555555; font-family: sans-serif; letter-spacing: 0.5px;">
+                RETAIL PIPELINE MASTER PLATFORM 2026 | Centro Direzionale Monitoraggio Acquiring & E-commerce
             </span>
         </div>
         """, 
@@ -41,7 +47,7 @@ with title_col:
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# FUNZIONE DI PULIZIA NUMERICA ULTRA RESTRITTIVA
+# FUNZIONE DI PULIZIA NUMERICA RESTRITTIVA
 # -----------------------------------------------------------------------------
 def clean_numeric_col_final(series):
     s = series.astype(str).str.replace('€', '', regex=False)
@@ -60,13 +66,13 @@ def clean_numeric_col_final(series):
     return s.apply(convert_single_value).fillna(0.0)
 
 # -----------------------------------------------------------------------------
-# CARICAMENTO DATI
+# CARICAMENTO DATI EXCEL
 # -----------------------------------------------------------------------------
 @st.cache_data
 def load_real_data_optimized():
     files = [f for f in os.listdir('.') if f.endswith('.xlsx')]
     if not files:
-        return None, None, None, "Nessun file .xlsx trovato."
+        return None, None, None, "Nessun file .xlsx trovato nella directory."
     
     file_path = files[0]
     try:
@@ -80,12 +86,10 @@ def load_real_data_optimized():
 df_pipeline_raw, df_team_raw, df_sow_raw, detected_file = load_real_data_optimized()
 
 if df_pipeline_raw is None:
-    st.error(f"⚠️ Errore di caricamento: {detected_file}")
+    st.error(f"⚠️ Errore critico nel caricamento dell'Excel: {detected_file}")
     st.stop()
 
-# -----------------------------------------------------------------------------
-# ALLINEAMENTO DATI PIPELINE (RISOLTO NAMEERROR RIGA 96)
-# -----------------------------------------------------------------------------
+# Mapping dinamico colonne pipeline
 df_pipeline = df_pipeline_raw.copy()
 df_pipeline.columns = [str(c).strip() for c in df_pipeline.columns]
 
@@ -93,38 +97,41 @@ col_account = next((c for c in df_pipeline.columns if c.upper() in ['ACCOUNT', '
 col_status = next((c for c in df_pipeline.columns if c.upper() in ['STATUS', 'STATO']), 'STATUS')
 col_ricavi = next((c for c in df_pipeline.columns if c.upper() in ['RICAVI', 'VALORE', 'REVENUE']), 'RICAVI')
 col_merchant = next((c for c in df_pipeline.columns if c.upper() in ['MERCHANT', 'CLIENTE', 'RAGIONE SOCIALE']), 'Merchant')
-col_categoria = next((c for c in df_pipeline.columns if c.upper() in ['CATEGORIA', 'CATEGORIA DEAL', 'PRODOTTO', 'SOLUZIONE', 'TIPO']), 'CATEGORIA DEAL')
+col_categoria = next((c for c in df_pipeline.columns if c.upper() in ['CATEGORIA', 'CATEGORIA DEAL', 'PRODOTTO', 'SOLUZIONE']), 'CATEGORIA DEAL')
 
 if col_ricavi in df_pipeline.columns:
     df_pipeline[col_ricavi] = clean_numeric_col_final(df_pipeline[col_ricavi])
 else:
     df_pipeline[col_ricavi] = 0.0
 
-# -----------------------------------------------------------------------------
-# BANDA DEI FILTRI ORIZZONTALI IN ALTO
-# -----------------------------------------------------------------------------
-st.markdown("### 🎛️ Filtri di Monitoraggio")
-f_col1, f_col2 = st.columns(2)
-df_filtered = df_pipeline.copy()
-
-with f_col1:
+# =============================================================================
+# 🎛️ BARRA LATERALE AZIENDALE (SIDEBAR) PER I FILTRI
+# =============================================================================
+with st.sidebar:
+    st.markdown("### 🏢 Filtri Globali Platform")
+    st.markdown("Usa i selettori sotto per aggiornare istantaneamente tutte le metriche e le tabelle del team.")
+    st.markdown("---")
+    
+    df_filtered = df_pipeline.copy()
+    
     if col_account in df_pipeline.columns:
         commerciali = sorted([str(x).strip() for x in df_pipeline[col_account].dropna().unique() if str(x).strip() not in ['nan', '']])
-        acc_sel = st.multiselect("Filtra per Account Team:", options=commerciali, default=commerciali)
+        acc_sel = st.multiselect("👤 Seleziona Account Team:", options=commerciali, default=commerciali)
         if acc_sel:
             df_filtered = df_filtered[df_filtered[col_account].isin(acc_sel)]
-
-with f_col2:
+            
+    st.markdown(" ")
     if col_status in df_pipeline.columns:
         stati = sorted([str(x).strip() for x in df_pipeline[col_status].dropna().unique() if str(x).strip() not in ['nan', '']])
-        st_sel = st.multiselect("Filtra per Stato del Deal:", options=stati, default=stati)
+        st_sel = st.multiselect("🎯 Seleziona Stato Deal:", options=stati, default=stati)
         if st_sel:
             df_filtered = df_filtered[df_filtered[col_status].isin(st_sel)]
-
-st.markdown("---")
+            
+    st.markdown("---")
+    st.caption(f"File Dati Attivo:\n`{detected_file}`")
 
 # -----------------------------------------------------------------------------
-# NAVIGAZIONE INTERNA (TABS)
+# STRUTTURA A TAB INTERNE
 # -----------------------------------------------------------------------------
 tabs = st.tabs([
     "🎯 Database Pipeline",
@@ -135,7 +142,7 @@ tabs = st.tabs([
 ])
 
 # =============================================================================
-# TAB 1: DATABASE PIPELINE
+# TAB 1: DATABASE PIPELINE (CON FUNZIONE DOWNLOAD ESTERNA)
 # =============================================================================
 with tabs[0]:
     st.header("Database & Avanzamento Pipeline")
@@ -152,72 +159,58 @@ with tabs[0]:
         
     st.markdown("#### Lista Dati Estratti")
     st.dataframe(df_filtered, use_container_width=True)
+    
+    # Pulsante Export in CSV/Excel per l'utente Business
+    csv_data = df_filtered.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Esporta questa selezione di dati (CSV)",
+        data=csv_data,
+        file_name="pipeline_filtrata_retail_nexi.csv",
+        mime="text/csv"
+    )
 
 # =============================================================================
-# TAB 2: DASHBOARD GRAFICA
+# TAB 2: DASHBOARD GRAFICA (COLORI NEXI ISTITUZIONALI)
 # =============================================================================
 with tabs[1]:
     st.header("Analisi Macro ed Economica Retail 2026")
-    
-    d_col1, d_col2 = st.columns(2)
-    with d_col1:
-        st.metric("Valore Corretto Pipeline Filtrata", f"€ {df_filtered[col_ricavi].sum():,.2f}")
-    with d_col2:
-        st.metric("Numero totale Deal", len(df_filtered))
-        
-    st.markdown("---")
     g1, g2 = st.columns(2)
     
     with g1:
         st.subheader("Valore Pipeline per Singolo Account")
-        fig_acc = px.bar(df_filtered, x=col_account, y=col_ricavi, color=col_status, barmode="stack", text_auto='.2s')
+        fig_acc = px.bar(df_filtered, x=col_account, y=col_ricavi, color=col_status, 
+                         barmode="stack", text_auto='.2s',
+                         color_discrete_sequence=NEXI_COLORS)
+        fig_acc.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig_acc, use_container_width=True)
         
     with g2:
         st.subheader("Concentrazione Ricavi per Stato Trattativa")
-        fig_pie = px.pie(df_filtered, values=col_ricavi, names=col_status, hole=0.4)
+        fig_pie = px.pie(df_filtered, values=col_ricavi, names=col_status, hole=0.4,
+                         color_discrete_sequence=NEXI_COLORS)
         st.plotly_chart(fig_pie, use_container_width=True)
-
-    if col_categoria in df_filtered.columns and not df_filtered[col_categoria].dropna().empty:
-        st.markdown("---")
-        st.subheader("Sintesi per Tipologia/Categoria di Prodotto")
-        fig_cat = px.bar(df_filtered, x=col_categoria, y=col_ricavi, color=col_status, barmode="group")
-        st.plotly_chart(fig_cat, use_container_width=True)
 
 # =============================================================================
 # TAB 3: FOCUS PERSONALE
 # =============================================================================
 with tabs[2]:
     st.header("Area Personale Commerciale")
-    
     if col_account in df_pipeline.columns:
         commerciali_list = sorted([str(x).strip() for x in df_pipeline[col_account].dropna().unique() if str(x).strip() not in ['nan', '']])
-        default_idx = commerciali_list.index("Tomarchio") if "Tomarchio" in commerciali_list else 0
-        
+        default_idx =Box = commerciali_list.index("Tomarchio") if "Tomarchio" in commerciali_list else 0
         utente = st.selectbox("Seleziona il profilo commerciale da analizzare:", options=commerciali_list, index=default_idx)
-        
         df_singolo = df_pipeline[df_pipeline[col_account] == utente].copy()
         
         p1, p2, p3 = st.columns(3)
         val_win = df_singolo[df_singolo[col_status].astype(str).str.upper() == 'WIN'][col_ricavi].sum()
         val_wip = df_singolo[df_singolo[col_status].astype(str).str.upper() == 'WIP'][col_ricavi].sum()
-        
         with p1:
             st.metric("I tuoi Deal Chiusi (WIN)", f"€ {val_win:,.2f}")
         with p2:
             st.metric("Il tuo Portafoglio in Lavorazione (WIP)", f"€ {val_wip:,.2f}")
         with p3:
             st.metric("Numero Deal Totali in Gestione", len(df_singolo))
-            
-        st.markdown("---")
-        f_g1, f_g2 = st.columns([2, 1])
-        with f_g1:
-            st.markdown(f"#### Elenco dei Deal Attivi - {utente}")
-            st.dataframe(df_singolo, use_container_width=True)
-        with f_g2:
-            st.markdown("#### Ripartizione Stato")
-            fig_pers_pie = px.pie(df_singolo, values=col_ricavi, names=col_status)
-            st.plotly_chart(fig_pers_pie, use_container_width=True)
+        st.dataframe(df_singolo, use_container_width=True)
 
 # =============================================================================
 # TAB 4: PERFORMANCE BUDGET TEAM
@@ -226,45 +219,68 @@ with tabs[3]:
     st.header("Quadro Sintetico Budget & Target (CB + DBS IR)")
     
     if df_team_raw is not None and not df_team_raw.empty:
-        st.markdown("#### 📊 Dati di Sintesi Budget Commerciali")
         df_t_clean = df_team_raw.copy()
+        
+        if df_t_clean.iloc[0].astype(str).str.contains('Target|Commerciale|Budget|Dalla', case=False, na=False).any():
+            df_t_clean.columns = df_t_clean.iloc[0].astype(str)
+            df_t_clean = df_t_clean[1:].reset_index(drop=True)
+        elif df_t_clean.iloc[1].astype(str).str.contains('Target|Commerciale|Budget|Dalla', case=False, na=False).any():
+            df_t_clean.columns = df_t_clean.iloc[1].astype(str)
+            df_t_clean = df_t_clean[2:].reset_index(drop=True)
+            
         df_t_clean.columns = [str(c).strip() for c in df_t_clean.columns]
         
         nomi_commerciali = ['Dalla Torre', 'Mariani', 'Tomarchio', 'Luzzio']
-        df_team_filtered = df_t_clean[df_t_clean.astype(str).apply(lambda x: x.str.contains('|'.join(nomi_commerciali))).any(axis=1)].copy()
+        df_team_filtered = df_t_clean[df_t_clean.astype(str).apply(lambda x: x.str.contains('|'.join(nomi_commerciali), case=False)).any(axis=1)].copy()
         
+        st.markdown("#### 📊 Tabella Target Ricostruita con Intestazioni Corrette")
         if not df_team_filtered.empty:
             st.dataframe(df_team_filtered, use_container_width=True)
         else:
-            st.info("Layout di budget complesso. Naviga l'intero foglio espandendo la sezione sotto:")
+            st.dataframe(df_t_clean.head(15), use_container_width=True)
             
-        with st.expander("Visualizza Foglio Budget Excel Integrale"):
+        with st.expander("Visualizza Foglio Budget Integrale Grezzo"):
             st.dataframe(df_team_raw, use_container_width=True)
-    else:
-        st.warning("Il foglio 'CB + DBS IR' non contiene dati o è vuoto.")
 
 # =============================================================================
-# TAB 5: SHARE OF WALLET (SOW)
+# TAB 5: SHARE OF WALLET (SOW) - PROFILATO SUL TEAM RETAIL (COLORI NEXI)
 # =============================================================================
 with tabs[4]:
-    st.header("Analisi Posizionamento Competitivo (SOW 2025)")
+    st.header("Analisi Posizionamento Competitivo (SOW 2025) - Focus Retail Team")
     
     if df_sow_raw is not None and not df_sow_raw.empty:
         df_sow = df_sow_raw.copy()
         df_sow.columns = [str(c).strip() for c in df_sow.columns]
         
-        col_merchant_sow = next((c for c in df_sow.columns if c.upper() in ['LAKA', 'MERCHANT', 'CLIENTE']), df_sow.columns[0])
+        col_merchant_sow = next((c for c in df_sow.columns if c.upper() in ['LAKA', 'MERCHANT', 'CLIENTE', 'RAGIONE SOCIALE']), df_sow.columns[0])
         col_nexi_sow = next((c for c in df_sow.columns if 'NEXI' in c.upper()), None)
         
         if col_nexi_sow:
-            df_sow['SOW NEXI NUMERICA (%)'] = clean_numeric_col_final(df_sow[col_nexi_sow])
+            df_sow['SOW NEXI (%)'] = clean_numeric_col_final(df_sow[col_nexi_sow])
             
-            st.markdown("#### 📈 Grafico di Sintesi: Presidio Quota Nexi sui Clienti")
-            df_sow_chart = df_sow.dropna(subset=[col_merchant_sow]).head(15)
-            fig_sow = px.bar(df_sow_chart, x=col_merchant_sow, y='SOW NEXI NUMERICA (%)', title="Quota di Mercato Nexi (%) sui Top 15 Clienti", text_auto=True)
-            st.plotly_chart(fig_sow, use_container_width=True)
+            # Filtro esclusivo clienti attivi o assegnati al team
+            if col_merchant in df_pipeline.columns:
+                clienti_retail_pipeline = set(df_pipeline[col_merchant].dropna().astype(str).str.strip().str.upper().unique())
+                df_sow['Is_Retail_Team'] = df_sow[col_merchant_sow].astype(str).str.strip().str.upper().apply(lambda x: any(c in x for c in clienti_retail_pipeline))
+                df_sow_retail = df_sow[df_sow['Is_Retail_Team'] == True].copy()
+            else:
+                df_sow_retail = df_sow.head(20).copy()
             
-        st.markdown("#### 📄 Tabella Analitica Completa Share of Wallet")
-        st.dataframe(df_sow, use_container_width=True)
-    else:
-        st.warning("Il foglio 'SOW 2025' risulta vuoto o non trovato.")
+            sow_c1, sow_c2 = st.columns([2, 1])
+            
+            with sow_c1:
+                st.markdown(f"#### 🎯 Quota di Mercato Nexi (%) sui Clienti Assegnati al Nostro Team (N. {len(df_sow_retail)})")
+                if not df_sow_retail.empty:
+                    fig_sow_bar = px.bar(df_sow_retail.head(15), x=col_merchant_sow, y='SOW NEXI (%)', 
+                                         color='SOW NEXI (%)', color_continuous_scale="Reds", text_auto=True)
+                    st.plotly_chart(fig_sow_bar, use_container_width=True)
+                else:
+                    st.info("Nessuna corrispondenza esatta automatica. Visualizzazione dei record principali:")
+                    fig_sow_bar = px.bar(df_sow.head(15), x=col_merchant_sow, y='SOW NEXI (%)', text_auto=True)
+                    st.plotly_chart(fig_sow_bar, use_container_width=True)
+                    
+            with sow_c2:
+                st.markdown("#### 🦅 Presidio Nexi del Team vs Competitor")
+                quota_media_team = df_sow_retail['SOW NEXI (%)'].mean() if not df_sow_retail.empty else df_sow['SOW NEXI (%)'].mean()
+                if quota_media_team > 100: 
+                    quota_media_team = quota_media_team / 100 if quota_media_team <= 1000
