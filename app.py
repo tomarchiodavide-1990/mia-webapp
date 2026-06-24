@@ -40,7 +40,7 @@ st.markdown("---")
 # -----------------------------------------------------------------------------
 def clean_numeric(series):
     s = series.astype(str).str.replace('€', '', regex=False).str.replace(r'\s+', '', regex=True)
-    return s.apply(lambda val: float(val.replace(',', '.')) if ',' in val else float(val) if val.replace('.','',1).isdigit() else 0.0).fillna(0.0)
+    return s.apply(lambda val: float(val.replace(',', '.')) if ',' in val else float(val) if str(val).replace('.','',1).isdigit() else 0.0).fillna(0.0)
 
 @st.cache_data
 def load_data():
@@ -70,28 +70,4 @@ with st.sidebar:
     st.header("🎛️ Filtri Globali")
     acc_list = sorted([str(x) for x in df_p[col_account].dropna().unique() if str(x) not in ['nan','']])
     acc_sel = st.multiselect("Account Team:", acc_list, default=acc_list)
-    df_filtered = df_p[df_p[col_account].isin(acc_sel)]
-
-# -----------------------------------------------------------------------------
-# TABS
-# -----------------------------------------------------------------------------
-tabs = st.tabs(["🎯 Pipeline", "📈 Dashboard", "👤 Focus", "👥 Budget", "🦅 SOW"])
-
-with tabs[0]: # Database
-    st.dataframe(df_filtered, use_container_width=True)
-    st.download_button("📥 Esporta CSV", df_filtered.to_csv(index=False), "data.csv")
-
-with tabs[1]: # Dashboard
-    c1, c2 = st.columns(2)
-    with c1: st.plotly_chart(px.bar(df_filtered, x=col_account, y=col_ricavi, color=col_status, color_discrete_sequence=NEXI_COLORS), use_container_width=True)
-    with c2: st.plotly_chart(px.pie(df_filtered, values=col_ricavi, names=col_status, color_discrete_sequence=NEXI_COLORS), use_container_width=True)
-
-with tabs[3]: # Budget
-    df_t = df_t_raw.copy()
-    # Pulizia colonne Unnamed
-    for i in range(min(5, len(df_t))):
-        if df_t.iloc[i].astype(str).str.contains('Target|Commerciale', case=False).any():
-            df_t.columns = df_t.iloc[i]
-            df_t = df_t[i+1:]
-            break
-    df_t =
+    df_filtered =
