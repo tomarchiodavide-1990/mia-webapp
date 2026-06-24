@@ -5,19 +5,40 @@ import os
 
 st.set_page_config(page_title="Retail Pipeline Master Platform 2026", layout="wide", page_icon="🏢")
 
-st.title("🏢 Retail Pipeline Master Platform 2026")
-st.markdown("### Piattaforma Strategica di Monitoraggio Acquiring & E-commerce per il Team Retail")
+# -----------------------------------------------------------------------------
+# INTESTAZIONE CON LOGO NEXI E SCRITTA RETAIL & LUXURY
+# -----------------------------------------------------------------------------
+logo_col, title_col = st.columns([1, 4])
+
+with logo_col:
+    # Logo ufficiale Nexi preso dal server statico ufficiale
+    st.image("https://www.nexi.it/content/dam/nexi/logos/nexi-logo.png", width=160)
+
+with title_col:
+    st.markdown(
+        """
+        <div style="padding-top: 10px;">
+            <span style="font-size: 32px; font-weight: bold; color: #1e1e1e; font-family: sans-serif;">
+                Retail & Luxury
+            </span>
+            <br>
+            <span style="font-size: 16px; color: #666666; font-family: sans-serif;">
+                Retail Pipeline Master Platform 2026 | Piattaforma Strategica di Monitoraggio Acquiring & E-commerce
+            </span>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+
+st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# FUNZIONE DI PULIZIA NUMERICA ULTRA RESTRITTIVA (Risolve il valore troppo alto)
+# FUNZIONE DI PULIZIA NUMERICA ULTRA RESTRITTIVA
 # -----------------------------------------------------------------------------
 def clean_numeric_col_final(series):
-    # Forza la conversione in testo, rimuove spazi, simboli € e gestisce i formati
     s = series.astype(str).str.replace('€', '', regex=False)
     s = s.str.replace(r'\s+', '', regex=True)
     
-    # Se il dato è letto come float con formato scientifico (es. 1.2e+05) lo lasciamo convertire nativamente
-    # Altrimenti, se è nel formato italiano "1.200,00", togliamo il punto e cambiamo la virgola in punto
     def convert_single_value(val):
         try:
             if ',' in val and '.' in val:
@@ -66,6 +87,63 @@ col_ricavi = next((c for c in df_pipeline.columns if c.upper() in ['RICAVI', 'VA
 col_merchant = next((c for c in df_pipeline.columns if c.upper() in ['MERCHANT', 'CLIENTE']), 'Merchant')
 col_categoria = next((c for c in df_pipeline.columns if c.upper() in ['CATEGORIA', 'CATEGORIA DEAL', 'PRODOTTO']), 'CATEGORIA DEAL')
 
-# Applica la pulizia restrittiva sui ricavi
 if col_ricavi in df_pipeline.columns:
-    df_pipeline[col_ricavi] = clean_numeric_col_final(df
+    df_pipeline[col_ricavi] = clean_numeric_col_final(df_pipeline[col_ricavi])
+else:
+    df_pipeline[col_ricavi] = 0.0
+
+# -----------------------------------------------------------------------------
+# BANDA DEI FILTRI ORIZZONTALI IN ALTO
+# -----------------------------------------------------------------------------
+st.markdown("### 🎛️ Filtri di Monitoraggio")
+f_col1, f_col2 = st.columns(2)
+df_filtered = df_pipeline.copy()
+
+with f_col1:
+    if col_account in df_pipeline.columns:
+        commerciali = sorted([str(x).strip() for x in df_pipeline[col_account].dropna().unique() if str(x).strip() not in ['nan', '']])
+        acc_sel = st.multiselect("Filtra per Account Team:", options=commerciali, default=commerciali)
+        if acc_sel:
+            df_filtered = df_filtered[df_filtered[col_account].isin(acc_sel)]
+
+with f_col2:
+    if col_status in df_pipeline.columns:
+        stati = sorted([str(x).strip() for x in df_pipeline[col_status].dropna().unique() if str(x).strip() not in ['nan', '']])
+        st_sel = st.multiselect("Filtra per Stato del Deal:", options=stati, default=stati)
+        if st_sel:
+            df_filtered = df_filtered[df_filtered[col_status].isin(st_sel)]
+
+st.markdown("---")
+
+# -----------------------------------------------------------------------------
+# NAVIGAZIONE INTERNA (TABS)
+# -----------------------------------------------------------------------------
+tabs = st.tabs([
+    "🎯 Database Pipeline",
+    "📈 Dashboard Grafica", 
+    "👤 Focus Personale", 
+    "👥 Performance Budget Team", 
+    "🦅 Share of Wallet (SOW)"
+])
+
+# =============================================================================
+# TAB 1: DATABASE PIPELINE
+# =============================================================================
+with tabs[0]:
+    st.header("Database & Avanzamento Pipeline")
+    
+    s1, s2, s3 = st.columns(3)
+    with s1:
+        st.metric("Valore Pipeline Selezionata", f"€ {df_filtered[col_ricavi].sum():,.2f}")
+    with s2:
+        st.metric("Deal in Pancia", len(df_filtered))
+    with s3:
+        win_deals = len(df_filtered[df_filtered[col_status].astype(str).str.upper() == 'WIN'])
+        win_rate = (win_deals / len(df_filtered) * 100) if len(df_filtered) > 0 else 0
+        st.metric("Percentuale Deal Chiusi (WIN)", f"{win_rate:.1f}%")
+        
+    st.markdown("#### Lista Dati Estratti")
+    st.dataframe(df_filtered, use_container_width=True)
+
+# =============================================================================
+# TAB 2
