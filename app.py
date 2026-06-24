@@ -283,4 +283,16 @@ with tabs[4]:
                 st.markdown("#### 🦅 Presidio Nexi del Team vs Competitor")
                 quota_media_team = df_sow_retail['SOW NEXI (%)'].mean() if not df_sow_retail.empty else df_sow['SOW NEXI (%)'].mean()
                 if quota_media_team > 100: 
-                    quota_media_team = quota_media_team / 100 if quota_media_team <= 1000
+                    quota_media_team = quota_media_team / 100 if quota_media_team <= 10000 else 50.0
+                
+                quota_competitor = max(0.0, 100.0 - quota_media_team)
+                fig_sow_pie = px.pie(names=['Quota Nexi Team', 'Quota Competitor'], values=[quota_media_team, quota_competitor], 
+                                     color_discrete_sequence=['#E30613', '#777777'], hole=0.5)
+                st.plotly_chart(fig_sow_pie, use_container_width=True)
+                
+            st.markdown("#### 📄 Tabella Estratta Condivisa (Solo Clienti Assegnati a Noi)")
+            colonne_da_mostrare = [col_merchant_sow, col_nexi_sow, 'SOW NEXI (%)']
+            colonne_presenti = [c for c in colonne_da_mostrare if c in df_sow_retail.columns]
+            st.dataframe(df_sow_retail[colonne_presenti] if not df_sow_retail.empty else df_sow[colonne_presenti].head(30), use_container_width=True)
+    else:
+        st.warning("Il foglio 'SOW 2025' risulta vuoto o non è stato configurato nel file Excel.")
