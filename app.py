@@ -113,3 +113,53 @@ with f_col1:
         commerciali = sorted([str(x).strip() for x in df_pipeline[col_account].dropna().unique() if str(x).strip() not in ['nan', '']])
         acc_sel = st.multiselect("Filtra per Account Team:", options=commerciali, default=commerciali)
         if acc_sel:
+            df_filtered = df_filtered[df_filtered[col_account].isin(acc_sel)]
+
+with f_col2:
+    if col_status in df_pipeline.columns:
+        stati = sorted([str(x).strip() for x in df_pipeline[col_status].dropna().unique() if str(x).strip() not in ['nan', '']])
+        st_sel = st.multiselect("Filtra per Stato del Deal:", options=stati, default=stati)
+        if st_sel:
+            df_filtered = df_filtered[df_filtered[col_status].isin(st_sel)]
+
+st.markdown("---")
+
+# -----------------------------------------------------------------------------
+# NAVIGAZIONE INTERNA (TABS)
+# -----------------------------------------------------------------------------
+tabs = st.tabs([
+    "🎯 Database Pipeline",
+    "📈 Dashboard Grafica", 
+    "👤 Focus Personale", 
+    "👥 Performance Budget Team", 
+    "🦅 Share of Wallet (SOW)"
+])
+
+# =============================================================================
+# TAB 1: DATABASE PIPELINE
+# =============================================================================
+with tabs[0]:
+    st.header("Database & Avanzamento Pipeline")
+    
+    s1, s2, s3 = st.columns(3)
+    with s1:
+        st.metric("Valore Pipeline Selezionata", f"€ {df_filtered[col_ricavi].sum():,.2f}")
+    with s2:
+        st.metric("Deal in Pancia", len(df_filtered))
+    with s3:
+        win_deals = len(df_filtered[df_filtered[col_status].astype(str).str.upper() == 'WIN'])
+        win_rate = (win_deals / len(df_filtered) * 100) if len(df_filtered) > 0 else 0
+        st.metric("Percentuale Deal Chiusi (WIN)", f"{win_rate:.1f}%")
+        
+    st.markdown("#### Lista Dati Estratti")
+    st.dataframe(df_filtered, use_container_width=True)
+
+# =============================================================================
+# TAB 2: DASHBOARD GRAFICA
+# =============================================================================
+with tabs[1]:
+    st.header("Analisi Macro ed Economica Retail 2026")
+    
+    d_col1, d_col2 = st.columns(2)
+    with d_col1:
+        st.metric("Valore Corretto Pipeline Filtrata", f"€ {df_filtered
