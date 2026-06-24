@@ -9,103 +9,87 @@ st.title("🏢 Retail Pipeline Master Platform 2026")
 st.markdown("### Piattaforma Strategica di Monitoraggio Acquiring & E-commerce per il Team Retail")
 
 # -----------------------------------------------------------------------------
-# LETTURA SICURA DELL'EXCEL
+# LETTURA TOTALMENTE APERTA E SICURA DELL'EXCEL
 # -----------------------------------------------------------------------------
 @st.cache_data
-def load_real_data_safe():
+def load_real_data_ultra_safe():
     files = [f for f in os.listdir('.') if f.endswith('.xlsx')]
     if not files:
-        return None, None, None, "Nessun file .xlsx trovato nella cartella"
+        return None, None, None, "Nessun file .xlsx trovato nella cartella principale di GitHub."
     
     file_path = files[0]
     try:
         xls = pd.ExcelFile(file_path, engine='openpyxl')
         sheets = xls.sheet_names
         
+        # Carichiamo i fogli così come sono, senza filtri o manipolazioni preventive
         df_p = pd.read_excel(file_path, sheet_name="PIPELINE", engine='openpyxl') if "PIPELINE" in sheets else pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
         df_t = pd.read_excel(file_path, sheet_name="CB + DBS IR", engine='openpyxl') if "CB + DBS IR" in sheets else pd.DataFrame()
         df_s = pd.read_excel(file_path, sheet_name="SOW 2025", engine='openpyxl') if "SOW 2025" in sheets else pd.DataFrame()
         
         return df_p, df_t, df_s, file_path
     except Exception as e:
-        return None, None, None, str(e)
+        return None, None, None, f"Errore critico di lettura: {str(e)}"
 
-df_pipeline, df_team_raw, df_sow, status_msg = load_real_data_safe()
+df_pipeline, df_team_raw, df_sow, detected_file = load_real_data_ultra_safe()
 
+# Se c'è un errore bloccante, lo mostriamo chiaramente a schermo per fare debug
 if df_pipeline is None:
-    st.error(f"⚠️ Errore nel caricamento: {status_msg}")
+    st.error(f"⚠️ {detected_file}")
     st.stop()
 
-st.sidebar.success(f"📁 Collegato a: {status_msg}")
+# Banner informativo sul file agganciato
+st.info(f"📁 File Excel letto con successo: **{detected_file}**")
 
-# -----------------------------------------------------------------------------
-# TRATTAMENTO INDISTRUTTIBILE DEL FOGLIO BUDGET (CB + DBS IR)
-# -----------------------------------------------------------------------------
-df_team = pd.DataFrame()
-if not df_team_raw.empty:
-    try:
-        nomi_team = ['Dalla Torre', 'Mariani', 'Tomarchio', 'Luzzio']
-        riga_inizio = None
-        colonna_nomi = None
-        
-        # Cerchiamo dove si trovano i commerciali nelle prime 20 righe
-        for r in range(min(len(df_team_raw), 20)):
-            for c in range(len(df_team_raw.columns)):
-                valore = str(df_team_raw.iloc[r, c]).strip()
-                if any(nome in valore for nome in nomi_team):
-                    riga_inizio = r
-                    colonna_nomi = c
-                    break
-            if riga_inizio is not None:
-                break
-                
-        if riga_inizio is not None:
-            # Recuperiamo le intestazioni di colonna
-            intestazioni = df_team_raw.iloc[riga_inizio - 1].tolist()
-            if all(pd.isna(x) for x in intestazioni) or riga_inizio == 0:
-                intestazioni = df_team_raw.iloc[riga_inizio].tolist()
-                
-            df_pulito = df_team_raw.iloc[riga_inizio:].copy()
-            df_pulito.columns = [str(h).strip() for h in intestazioni]
-            
-            col_target_name = df_pulito.columns[colonna_nomi]
-            
-            # Filtriamo solo i membri del team
-            df_team = df_pulito[df_pulito[col_target_name].astype(str).str.contains('|'.join(nomi_team), na=False)].copy()
-            df_team.rename(columns={col_target_name: "Commerciale"}, inplace=True)
-            
-            # CONVERSIONE NUMERICA BLINDATA COLONNA PER COLONNA (Risolve il TypeError)
-            for col in df_team.columns:
-                if col != "Commerciale":
-                    df_team[col] = df_team[col].apply(pd.to_numeric, errors='coerce')
-        else:
-            df_team = df_team_raw.copy()
-    except Exception as e:
-        # Fallback totale se l'excel è formattato in modo imprevisto
-        df_team = df_team_raw.copy()
-
-# -----------------------------------------------------------------------------
-# PULIZIA COLONNE PIPELINE
-# -----------------------------------------------------------------------------
+# Pulizia base dei nomi delle colonne per evitare spazi vuoti laterali
 df_pipeline.columns = [str(c).strip() for c in df_pipeline.columns]
-col_account = next((c for c in df_pipeline.columns if c.upper() == 'ACCOUNT'), None)
-col_status = next((c for c in df_pipeline.columns if c.upper() == 'STATUS'), None)
-col_ricavi = next((c for c in df_pipeline.columns if c.upper() == 'RICAVI'), None)
 
-# Filtri barra laterale
-st.sidebar.header("🎛️ Pannello di Controllo & Filtri")
+# Individuiamo la colonna del commerciale e dello stato in modo flessibile
+col_account = next((c for c in df_pipeline.columns if c.upper() in ['ACCOUNT', 'COMMERCIALE', 'SALES']), None)
+col_status = next((c for c in df_pipeline.columns if c.upper() in ['STATUS', 'STATO']), None)
+col_ricavi = next((c for c in df_pipeline.columns if c.upper() in ['RICAVI', 'VALORE', 'REVENUE']), None)
+
+# -----------------------------------------------------------------------------
+# FILTRI POSIZIONATI COME BANDA ORIZZONTALE IN ALTO
+# -----------------------------------------------------------------------------
+st.markdown("### 🎛️ Filtri di Monitoraggio")
+f_col1, f_col2 = st.columns(2)
+
 df_filtered = df_pipeline.copy()
 
-if col_account:
-    commerciali = list(df_pipeline[col_account].dropna().unique())
-    acc_sel = st.sidebar.multiselect("Visualizza Account Team:", options=commerciali, default=commerciali)
-    if acc_sel:
-        df_filtered = df_filtered[df_filtered[col_account].isin(acc_sel)]
+with f_col1:
+    if col_account:
+        commerciali_disponibili = list(df_pipeline[col_account].dropna().unique())
+        acc_sel = st.multiselect("Filtra per Account Team:", options=commerciali_disponibili, default=commerciali_disponibili)
+        if acc_sel:
+            df_filtered = df_filtered[df_filtered[col_account].isin(acc_sel)]
+    else:
+        st.caption("Filtro Account non disponibile (colonna non intercettata)")
 
-if col_status:
-    stati = list(df_pipeline[col_status].dropna().unique())
-    st_sel = st.sidebar.multiselect("Stato del Deal:", options=stati, default=stati)
-    if st_sel:
-        df_filtered = df_filtered[df_filtered[col_status].isin(st_sel)]
+with f_col2:
+    if col_status:
+        stati_disponibili = list(df_pipeline[col_status].dropna().unique())
+        st_sel = st.multiselect("Filtra per Stato del Deal:", options=stati_disponibili, default=stati_disponibili)
+        if st_sel:
+            df_filtered = df_filtered[df_filtered[col_status].isin(st_sel)]
+    else:
+        st.caption("Filtro Stato non disponibile (colonna non intercettata)")
 
-#
+st.markdown("---")
+
+# -----------------------------------------------------------------------------
+# PAGINE (TABS)
+# -----------------------------------------------------------------------------
+tabs = st.tabs([
+    "🎯 Database Pipeline",
+    "📈 Dashboard Grafica", 
+    "👤 Focus Personale", 
+    "👥 Performance Budget Team", 
+    "🦅 Share of Wallet (SOW)"
+])
+
+# =============================================================================
+# TAB 1: DATABASE PIPELINE (Messa come prima tab così vedi subito i dati!)
+# =============================================================================
+with tabs[0]:
+    st.header("Database Completo della Pipeline (Foglio PIPELINE)")
