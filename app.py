@@ -84,13 +84,65 @@ if df_pipeline_raw is None:
     st.stop()
 
 # -----------------------------------------------------------------------------
-# ALLINEAMENTO DATI PIPELINE
+# ALLINEAMENTO DATI PIPELINE (RISOLTO NAMEERROR RIGA 96)
 # -----------------------------------------------------------------------------
 df_pipeline = df_pipeline_raw.copy()
 df_pipeline.columns = [str(c).strip() for c in df_pipeline.columns]
 
-col_account = next((c for c in df_pipeline.columns if c.upper() in ['ACCOUNT', 'COMMERCIALE']), 'Account')
+col_account = next((c for c in df_pipeline.columns if c.upper() in ['ACCOUNT', 'COMMERCIALE', 'SALES']), 'Account')
 col_status = next((c for c in df_pipeline.columns if c.upper() in ['STATUS', 'STATO']), 'STATUS')
-col_ricavi = next((c for c in df_pipeline.columns if c.upper() in ['RICAVI', 'VALORE']), 'RICAVI')
-col_merchant = next((c for c in df_pipeline.columns if c.upper() in ['MERCHANT', 'CLIENTE']), 'Merchant')
-col
+col_ricavi = next((c for c in df_pipeline.columns if c.upper() in ['RICAVI', 'VALORE', 'REVENUE']), 'RICAVI')
+col_merchant = next((c for c in df_pipeline.columns if c.upper() in ['MERCHANT', 'CLIENTE', 'RAGIONE SOCIALE']), 'Merchant')
+col_categoria = next((c for c in df_pipeline.columns if c.upper() in ['CATEGORIA', 'CATEGORIA DEAL', 'PRODOTTO', 'SOLUZIONE', 'TIPO']), 'CATEGORIA DEAL')
+
+if col_ricavi in df_pipeline.columns:
+    df_pipeline[col_ricavi] = clean_numeric_col_final(df_pipeline[col_ricavi])
+else:
+    df_pipeline[col_ricavi] = 0.0
+
+# -----------------------------------------------------------------------------
+# BANDA DEI FILTRI ORIZZONTALI IN ALTO
+# -----------------------------------------------------------------------------
+st.markdown("### 🎛️ Filtri di Monitoraggio")
+f_col1, f_col2 = st.columns(2)
+df_filtered = df_pipeline.copy()
+
+with f_col1:
+    if col_account in df_pipeline.columns:
+        commerciali = sorted([str(x).strip() for x in df_pipeline[col_account].dropna().unique() if str(x).strip() not in ['nan', '']])
+        acc_sel = st.multiselect("Filtra per Account Team:", options=commerciali, default=commerciali)
+        if acc_sel:
+            df_filtered = df_filtered[df_filtered[col_account].isin(acc_sel)]
+
+with f_col2:
+    if col_status in df_pipeline.columns:
+        stati = sorted([str(x).strip() for x in df_pipeline[col_status].dropna().unique() if str(x).strip() not in ['nan', '']])
+        st_sel = st.multiselect("Filtra per Stato del Deal:", options=stati, default=stati)
+        if st_sel:
+            df_filtered = df_filtered[df_filtered[col_status].isin(st_sel)]
+
+st.markdown("---")
+
+# -----------------------------------------------------------------------------
+# NAVIGAZIONE INTERNA (TABS)
+# -----------------------------------------------------------------------------
+tabs = st.tabs([
+    "🎯 Database Pipeline",
+    "📈 Dashboard Grafica", 
+    "👤 Focus Personale", 
+    "👥 Performance Budget Team", 
+    "🦅 Share of Wallet (SOW)"
+])
+
+# =============================================================================
+# TAB 1: DATABASE PIPELINE
+# =============================================================================
+with tabs[0]:
+    st.header("Database & Avanzamento Pipeline")
+    
+    s1, s2, s3 = st.columns(3)
+    with s1:
+        st.metric("Valore Pipeline Selezionata", f"€ {df_filtered[col_ricavi].sum():,.2f}")
+    with s2:
+        st.metric("Deal in Pancia", len(df_filtered))
+    with s3:
