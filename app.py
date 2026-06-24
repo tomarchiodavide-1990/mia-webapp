@@ -22,11 +22,11 @@ def load_data():
         {"Merchant": "ACQUA & SAPONE", "Nome Deal": "Svecchiamento POS '26", "STATUS": "WIP", "RICAVI": 1500, "Categoria": "RINNOVO POS", "Canale": "FISICO", "Note": "Tender Card Present via BPER"},
     ]
     
-    # Dati Share of Wallet (SOW) per dimostrare dove stai rubando quote ai competitor
+    # Dati Share of Wallet (SOW) - Nomi colonne semplificati per evitare bug
     sow_data = [
-        {"Merchant": "ZARA", "Canale": "ECOMMERCE", "Quota Nexi/ISP": 0.64, "Competitor (Adyen/Sella)": 0.36, "Market Volume": "1.0 Bln€"},
-        {"Merchant": "D.M.O. S.P.A", "Canale": "MISTO", "Quota Nexi/ISP": 0.65, "Competitor (Adyen/UCI)": 0.35, "Market Volume": "230 M€"},
-        {"Merchant": "PRENATAL", "Canale": "FISICO", "Quota Nexi/ISP": 0.80, "Competitor (Altri)": 0.20, "Market Volume": "430 M€"}
+        {"Merchant": "ZARA", "Canale": "ECOMMERCE", "Quota_Nexi": 0.64, "Quota_Competitor": 0.36, "Market_Volume": "1.0 Bln€"},
+        {"Merchant": "D.M.O. S.P.A", "Canale": "MISTO", "Quota_Nexi": 0.65, "Quota_Competitor": 0.35, "Market_Volume": "230 M€"},
+        {"Merchant": "PRENATAL", "Canale": "FISICO", "Quota_Nexi": 0.80, "Quota_Competitor": 0.20, "Market_Volume": "430 M€"}
     ]
     
     return pd.DataFrame(pipeline_data), pd.DataFrame(sow_data)
@@ -45,7 +45,6 @@ with tab1:
     st.header("Focus Valore Totale Generato + Potenziale")
     st.info("💡 **Nota Strategica:** Il target YTD misura solo i contratti già firmati. Se consideriamo i deal ad alto stadio di avanzamento (WIP), la performance reale è nettamente superiore al budget assegnato.")
     
-    # Calcoli KPI di impatto
     chiuso_ytd = df_pipeline[df_pipeline["STATUS"] == "WIN"]["RICAVI"].sum()
     wip_potenziale = df_pipeline[df_pipeline["STATUS"] == "WIP"]["RICAVI"].sum()
     valore_totale = chiuso_ytd + wip_potenziale
@@ -59,7 +58,6 @@ with tab1:
     with col3:
         st.metric(label="Percentuale Copertura Target", value=f"{int((valore_totale/target_aziendale)*100)}%", delta="Target Ampiamente Superato")
 
-    # Grafico che mette in buona luce la pipeline
     st.subheader("Avanzamento e Copertura del Budget")
     df_chart = pd.DataFrame({
         "Stato": ["Target Richiesto", "Gia Chiuso (WIN)", "In Chiusura (WIP)"],
@@ -78,7 +76,7 @@ with tab1:
 # =============================================================================
 with tab2:
     st.header("Analisi Share of Wallet (SOW) sui Top Client")
-    st.markdown("Questa schermata mostra la tua efficacia nel difendere e sottrarre fette di mercato ai competitor (Adyen, Sella, ecc.) sui merchant che gestisci.")
+    st.markdown("Questa schermata mostra la tua efficacia nel difendere e sottrarre fette di mercato ai competitor sui merchant che gestisci.")
     
     col1_sow, col2_sow = st.columns([1, 2])
     
@@ -86,13 +84,16 @@ with tab2:
         st.subheader("I tuoi Merchant")
         for index, row in df_sow.iterrows():
             st.write(f"🍏 **{row['Merchant']}** ({row['Canale']})")
-            st.progress(int(row['Quota Nexi/ISP'] * 100))
-            st.caption(f"Tua Quota: {int(row['Quota Nexi/ISP']*100)}% | Competitor: {int(row['Competitor (Adyen/Sella)']*100)}% (Mercato: {row['Market Volume']})")
+            st.progress(int(row['Quota_Nexi'] * 100))
+            st.caption(f"Tua Quota: {int(row['Quota_Nexi']*100)}% | Competitor: {int(row['Quota_Competitor']*100)}% (Mercato: {row['Market_Volume']})")
             st.markdown("---")
             
     with col2_sow:
         st.subheader("Presidio del Mercato Gestito da Tomarchio")
-        df_sow_melt = df_sow.melt(id_vars=["Merchant"], value_vars=["Quota Nexi/ISP", "Competitor (Adyen/Sella)"], var_name="Posizionamento", value_name="Quota")
+        # Riorganizziamo i dati per il grafico evitando stringhe con caratteri speciali
+        df_sow_melt = df_sow.melt(id_vars=["Merchant"], value_vars=["Quota_Nexi", "Quota_Competitor"], var_name="Posizionamento", value_name="Quota")
+        df_sow_melt["Posizionamento"] = df_sow_melt["Posizionamento"].replace({"Quota_Nexi": "Quota Nexi/ISP", "Quota_Competitor": "Quota Competitor"})
+        
         fig_sow = px.bar(df_sow_melt, x="Merchant", y="Quota", color="Posizionamento", barmode="stack",
                          title="Dominanza Nexi/ISP sui tuoi Clienti Rispetto ai Concorrenti",
                          color_discrete_sequence=["#2ca02c", "#d62728"])
@@ -105,7 +106,6 @@ with tab3:
     st.header("Posizionamento nel Team per Qualità dei Clienti")
     st.markdown("Mentre altri gestiscono molti contratti piccoli, la tua strategia si concentra su **Grandi Account Core** (Retail & Apparel) che muovono volumi miliardari.")
     
-    # Simulazione che mette in luce la qualità del portafoglio di Tomarchio rispetto al team
     team_metrics = [
         {"Account": "Dalla Torre", "Numero Merchant": 12, "Volume Medio Clienti (M€)": 15, "Focus Primario": "Mass Market"},
         {"Account": "Mariani", "Numero Merchant": 8, "Volume Medio Clienti (M€)": 10, "Focus Primario": "SME / E-com local"},
