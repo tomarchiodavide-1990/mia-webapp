@@ -146,3 +146,125 @@ with tabs[0]:
     with s2:
         st.metric("Deal in Pancia", len(df_filtered))
     with s3:
+        win_deals = len(df_filtered[df_filtered[col_status].astype(str).str.upper() == 'WIN'])
+        win_rate = (win_deals / len(df_filtered) * 100) if len(df_filtered) > 0 else 0
+        st.metric("Percentuale Deal Chiusi (WIN)", f"{win_rate:.1f}%")
+        
+    st.markdown("#### Lista Dati Estratti")
+    st.dataframe(df_filtered, use_container_width=True)
+
+# =============================================================================
+# TAB 2: DASHBOARD GRAFICA
+# =============================================================================
+with tabs[1]:
+    st.header("Analisi Macro ed Economica Retail 2026")
+    
+    d_col1, d_col2 = st.columns(2)
+    with d_col1:
+        st.metric("Valore Corretto Pipeline Filtrata", f"€ {df_filtered[col_ricavi].sum():,.2f}")
+    with d_col2:
+        st.metric("Numero totale Deal", len(df_filtered))
+        
+    st.markdown("---")
+    g1, g2 = st.columns(2)
+    
+    with g1:
+        st.subheader("Valore Pipeline per Singolo Account")
+        fig_acc = px.bar(df_filtered, x=col_account, y=col_ricavi, color=col_status, barmode="stack", text_auto='.2s')
+        st.plotly_chart(fig_acc, use_container_width=True)
+        
+    with g2:
+        st.subheader("Concentrazione Ricavi per Stato Trattativa")
+        fig_pie = px.pie(df_filtered, values=col_ricavi, names=col_status, hole=0.4)
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    if col_categoria in df_filtered.columns and not df_filtered[col_categoria].dropna().empty:
+        st.markdown("---")
+        st.subheader("Sintesi per Tipologia/Categoria di Prodotto")
+        fig_cat = px.bar(df_filtered, x=col_categoria, y=col_ricavi, color=col_status, barmode="group")
+        st.plotly_chart(fig_cat, use_container_width=True)
+
+# =============================================================================
+# TAB 3: FOCUS PERSONALE
+# =============================================================================
+with tabs[2]:
+    st.header("Area Personale Commerciale")
+    
+    if col_account in df_pipeline.columns:
+        commerciali_list = sorted([str(x).strip() for x in df_pipeline[col_account].dropna().unique() if str(x).strip() not in ['nan', '']])
+        default_idx = commerciali_list.index("Tomarchio") if "Tomarchio" in commerciali_list else 0
+        
+        utente = st.selectbox("Seleziona il profilo commerciale da analizzare:", options=commerciali_list, index=default_idx)
+        
+        df_singolo = df_pipeline[df_pipeline[col_account] == utente].copy()
+        
+        p1, p2, p3 = st.columns(3)
+        val_win = df_singolo[df_singolo[col_status].astype(str).str.upper() == 'WIN'][col_ricavi].sum()
+        val_wip = df_singolo[df_singolo[col_status].astype(str).str.upper() == 'WIP'][col_ricavi].sum()
+        
+        with p1:
+            st.metric("I tuoi Deal Chiusi (WIN)", f"€ {val_win:,.2f}")
+        with p2:
+            st.metric("Il tuo Portafoglio in Lavorazione (WIP)", f"€ {val_wip:,.2f}")
+        with p3:
+            st.metric("Numero Deal Totali in Gestione", len(df_singolo))
+            
+        st.markdown("---")
+        f_g1, f_g2 = st.columns([2, 1])
+        with f_g1:
+            st.markdown(f"#### Elenco dei Deal Attivi - {utente}")
+            st.dataframe(df_singolo, use_container_width=True)
+        with f_g2:
+            st.markdown("#### Ripartizione Stato")
+            fig_pers_pie = px.pie(df_singolo, values=col_ricavi, names=col_status)
+            st.plotly_chart(fig_pers_pie, use_container_width=True)
+
+# =============================================================================
+# TAB 4: PERFORMANCE BUDGET TEAM
+# =============================================================================
+with tabs[3]:
+    st.header("Quadro Sintetico Budget & Target (CB + DBS IR)")
+    
+    if df_team_raw is not None and not df_team_raw.empty:
+        st.markdown("#### 📊 Dati di Sintesi Budget Commerciali")
+        df_t_clean = df_team_raw.copy()
+        df_t_clean.columns = [str(c).strip() for c in df_t_clean.columns]
+        
+        nomi_commerciali = ['Dalla Torre', 'Mariani', 'Tomarchio', 'Luzzio']
+        df_team_filtered = df_t_clean[df_t_clean.astype(str).apply(lambda x: x.str.contains('|'.join(nomi_commerciali))).any(axis=1)].copy()
+        
+        if not df_team_filtered.empty:
+            st.dataframe(df_team_filtered, use_container_width=True)
+        else:
+            st.info("Layout di budget complesso. Naviga l'intero foglio espandendo la sezione sotto:")
+            
+        with st.expander("Visualizza Foglio Budget Excel Integrale"):
+            st.dataframe(df_team_raw, use_container_width=True)
+    else:
+        st.warning("Il foglio 'CB + DBS IR' non contiene dati o è vuoto.")
+
+# =============================================================================
+# TAB 5: SHARE OF WALLET (SOW)
+# =============================================================================
+with tabs[4]:
+    st.header("Analisi Posizionamento Competitivo (SOW 2025)")
+    
+    if df_sow_raw is not None and not df_sow_raw.empty:
+        df_sow = df_sow_raw.copy()
+        df_sow.columns = [str(c).strip() for c in df_sow.columns]
+        
+        col_merchant_sow = next((c for c in df_sow.columns if c.upper() in ['LAKA', 'MERCHANT', 'CLIENTE']), df_sow.columns[0])
+        col_nexi_sow = next((c for c in df_sow.columns if 'NEXI' in c.upper()), None)
+        
+        if col_nexi_sow:
+            df_sow['SOW NEXI NUMERICA (%)'] = clean_numeric_col_final(df_sow[col_nexi_sow])
+            
+            st.markdown("#### 📈 Grafico di Sintesi: Presidio Quota Nexi sui Clienti")
+            df_sow_chart = df_sow.dropna(subset=[col_merchant_sow]).head(15)
+            fig_sow = px.bar(df_sow_chart, x=col_merchant_sow, y='SOW NEXI NUMERICA (%)', title="Quota di Mercato Nexi (%) sui Top 15 Clienti", text_auto=True)
+            st.plotly_chart(fig_sow, use_container_width=True)
+            
+        st.markdown("#### 📄 Tabella Analitica Completa Share of Wallet")
+        st.dataframe(df_sow, use_container_width=True)
+    else:
+        st.warning("Il foglio 'SOW 2025' risulta vuoto o non trovato.")
