@@ -6,23 +6,32 @@ import os
 st.set_page_config(page_title="Retail Pipeline Master Platform 2026", layout="wide", page_icon="🏢")
 
 # -----------------------------------------------------------------------------
-# INTESTAZIONE CON LOGO NEXI E SCRITTA RETAIL & LUXURY
+# INTESTAZIONE CON LOGO NEXI VETTORIALE (SVG INCORPORATO) E SCRITTA RETAIL & LUXURY
 # -----------------------------------------------------------------------------
 logo_col, title_col = st.columns([1, 4])
 
 with logo_col:
-    # Logo ufficiale Nexi preso dal server statico ufficiale
-    st.image("https://www.nexi.it/content/dam/nexi/logos/nexi-logo.png", width=160)
+    # SVG nativo del logo Nexi (indistruttibile, non dipende da URL esterni)
+    nexi_svg = """
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80" width="160" height="53">
+        <rect width="240" height="80" fill="transparent"/>
+        <path d="M25 25h16.5l22 30V25h14v30h-16l-22.5-30.5V55H25V25z" fill="#E30613"/>
+        <path d="M88 25h32v9H99v4h19v8H99v4h22v9H88V25z" fill="#1D1D1B"/>
+        <path d="M126 25h15l10.5 14.5L162 25h15l-17.5 23.5L178 55h-15.5l-11-15.5L140.5 55H126l17.5-23.5L126 25z" fill="#1D1D1B"/>
+        <path d="M184 25h14v30h-14V25z" fill="#1D1D1B"/>
+    </svg>
+    """
+    st.markdown(nexi_svg, unsafe_allow_html=True)
 
 with title_col:
     st.markdown(
         """
-        <div style="padding-top: 10px;">
+        <div style="padding-top: 5px;">
             <span style="font-size: 32px; font-weight: bold; color: #1e1e1e; font-family: sans-serif;">
                 Retail & Luxury
             </span>
             <br>
-            <span style="font-size: 16px; color: #666666; font-family: sans-serif;">
+            <span style="font-size: 15px; color: #666666; font-family: sans-serif;">
                 Retail Pipeline Master Platform 2026 | Piattaforma Strategica di Monitoraggio Acquiring & E-commerce
             </span>
         </div>
@@ -104,46 +113,3 @@ with f_col1:
         commerciali = sorted([str(x).strip() for x in df_pipeline[col_account].dropna().unique() if str(x).strip() not in ['nan', '']])
         acc_sel = st.multiselect("Filtra per Account Team:", options=commerciali, default=commerciali)
         if acc_sel:
-            df_filtered = df_filtered[df_filtered[col_account].isin(acc_sel)]
-
-with f_col2:
-    if col_status in df_pipeline.columns:
-        stati = sorted([str(x).strip() for x in df_pipeline[col_status].dropna().unique() if str(x).strip() not in ['nan', '']])
-        st_sel = st.multiselect("Filtra per Stato del Deal:", options=stati, default=stati)
-        if st_sel:
-            df_filtered = df_filtered[df_filtered[col_status].isin(st_sel)]
-
-st.markdown("---")
-
-# -----------------------------------------------------------------------------
-# NAVIGAZIONE INTERNA (TABS)
-# -----------------------------------------------------------------------------
-tabs = st.tabs([
-    "🎯 Database Pipeline",
-    "📈 Dashboard Grafica", 
-    "👤 Focus Personale", 
-    "👥 Performance Budget Team", 
-    "🦅 Share of Wallet (SOW)"
-])
-
-# =============================================================================
-# TAB 1: DATABASE PIPELINE
-# =============================================================================
-with tabs[0]:
-    st.header("Database & Avanzamento Pipeline")
-    
-    s1, s2, s3 = st.columns(3)
-    with s1:
-        st.metric("Valore Pipeline Selezionata", f"€ {df_filtered[col_ricavi].sum():,.2f}")
-    with s2:
-        st.metric("Deal in Pancia", len(df_filtered))
-    with s3:
-        win_deals = len(df_filtered[df_filtered[col_status].astype(str).str.upper() == 'WIN'])
-        win_rate = (win_deals / len(df_filtered) * 100) if len(df_filtered) > 0 else 0
-        st.metric("Percentuale Deal Chiusi (WIN)", f"{win_rate:.1f}%")
-        
-    st.markdown("#### Lista Dati Estratti")
-    st.dataframe(df_filtered, use_container_width=True)
-
-# =============================================================================
-# TAB 2
